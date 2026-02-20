@@ -1,7 +1,7 @@
 import './style.css';
 
 // !!! WICHTIG: Diese URL nach Google Apps Script Deployment ersetzen !!!
-const BACKEND_URL = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
+const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzyWc-ofoviim3onr7ENdbo11ijw6WYbMU_Cjm1jdMUm7Nb6tFT6tve-ICE340568l6Ag/exec';
 
 // Check if backend is configured
 const BACKEND_CONFIGURED = BACKEND_URL !== 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
