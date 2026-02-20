@@ -1,7 +1,7 @@
 import './style.css';
 
 // !!! WICHTIG: Diese URL nach Google Apps Script Deployment ersetzen !!!
-const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyTeKNvh2I03ljodHa2lSBB2njt3WOGfom6ELk8nxrgRydcEsWMTPeVvC4Rsz2H78ZHPA/exec';
+const BACKEND_URL = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
 
 // Check if backend is configured
 const BACKEND_CONFIGURED = BACKEND_URL !== 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
@@ -63,7 +63,15 @@ async function getVotes() {
   }
   
   try {
-    const response = await fetch(`${BACKEND_URL}?action=getResults`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    
+    const response = await fetch(`${BACKEND_URL}?action=getResults`, {
+      signal: controller.signal,
+      cache: 'no-cache'
+    });
+    clearTimeout(timeoutId);
+    
     const data = await response.json();
     return {
       badge1: data.badge1 || 0,
@@ -95,13 +103,19 @@ async function submitVote(badgeId) {
   }
   
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    const formData = new URLSearchParams();
+    formData.append('action', 'vote');
+    formData.append('badge', badgeId);
+    
     const response = await fetch(BACKEND_URL, {
       method: 'POST',
-      body: new URLSearchParams({
-        action: 'vote',
-        badge: badgeId
-      })
+      body: formData,
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
     
     const data = await response.json();
     
@@ -114,7 +128,11 @@ async function submitVote(badgeId) {
     }
   } catch (error) {
     console.error('Error submitting vote:', error);
-    alert('Fehler beim Abstimmen. Bitte versuchen Sie es später erneut.');
+    if (error.name === 'AbortError') {
+      alert('Zeitüberschreitung. Bitte versuchen Sie es erneut.');
+    } else {
+      alert('Fehler beim Abstimmen. Bitte versuchen Sie es später erneut.');
+    }
     return false;
   }
 }
@@ -313,10 +331,10 @@ async function render() {
   }
 }
 
-// Initialize and auto-refresh every 10 seconds
+// Initialize and auto-refresh every 30 seconds
 render();
 setInterval(() => {
   if (!hasVoted()) {
     render(); // Only refresh if user hasn't voted yet
   }
-}, 10000);
+}, 30000);
