@@ -1,7 +1,13 @@
 import './style.css';
 
 // !!! WICHTIG: Diese URL nach Google Apps Script Deployment ersetzen !!!
-const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyTeKNvh2I03ljodHa2lSBB2njt3WOGfom6ELk8nxrgRydcEsWMTPeVvC4Rsz2H78ZHPA/exec';
+const BACKEND_URL = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
+
+// Check if backend is configured
+const BACKEND_CONFIGURED = BACKEND_URL !== 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
+
+// Demo mode storage key
+const DEMO_STORAGE_KEY = 'badge-votes-demo';
 
 // Badge data
 const badges = [
@@ -19,20 +25,43 @@ const badges = [
   }
 ];
 
+// Demo mode functions (localStorage)
+function getDemoVotes() {
+  const stored = localStorage.getItem(DEMO_STORAGE_KEY);
+  return stored ? JSON.parse(stored) : { badge1: 0, badge2: 0, userVote: null };
+}
+
+function saveDemoVotes(votes) {
+  localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(votes));
+}
+
 // Check if user has already voted (using cookie)
 function hasVoted() {
   return document.cookie.includes('badge_voted=true');
 }
 
 // Set voted cookie (expires in 30 days)
-function setVotedCookie() {
+function setVotedCookie(badgeId) {
   const expires = new Date();
   expires.setDate(expires.getDate() + 30);
   document.cookie = `badge_voted=true; expires=${expires.toUTCString()}; path=/`;
+  document.cookie = `voted_for=${badgeId}; expires=${expires.toUTCString()}; path=/`;
 }
 
-// Get current vote results from backend
+// Get current vote results from backend or demo mode
 async function getVotes() {
+  if (!BACKEND_CONFIGURED) {
+    // Demo mode
+    const demoVotes = getDemoVotes();
+    return {
+      badge1: demoVotes.badge1,
+      badge2: demoVotes.badge2,
+      total: demoVotes.badge1 + demoVotes.badge2,
+      userVoted: hasVoted(),
+      demoMode: true
+    };
+  }
+  
   try {
     const response = await fetch(`${BACKEND_URL}?action=getResults`);
     const data = await response.json();
@@ -40,16 +69,31 @@ async function getVotes() {
       badge1: data.badge1 || 0,
       badge2: data.badge2 || 0,
       total: data.total || 0,
-      userVoted: hasVoted()
+      userVoted: hasVoted(),
+      demoMode: false
     };
   } catch (error) {
     console.error('Error fetching votes:', error);
-    return { badge1: 0, badge2: 0, total: 0, userVoted: hasVoted() };
+    return { badge1: 0, badge2: 0, total: 0, userVoted: hasVoted(), demoMode: false };
   }
 }
 
-// Submit vote to backend
+// Submit vote to backend or demo mode
 async function submitVote(badgeId) {
+  if (!BACKEND_CONFIGURED) {
+    // Demo mode
+    const votes = getDemoVotes();
+    if (votes.userVote) {
+      alert('Sie haben bereits abgestimmt! (Demo-Modus)');
+      return false;
+    }
+    votes[badgeId]++;
+    votes.userVote = badgeId;
+    saveDemoVotes(votes);
+    setVotedCookie(badgeId);
+    return true;
+  }
+  
   try {
     const response = await fetch(BACKEND_URL, {
       method: 'POST',
@@ -62,7 +106,7 @@ async function submitVote(badgeId) {
     const data = await response.json();
     
     if (data.success) {
-      setVotedCookie();
+      setVotedCookie(badgeId);
       return true;
     } else {
       alert(data.message || 'Fehler beim Abstimmen');
@@ -124,11 +168,19 @@ async function render() {
   const votes = await getVotes();
   const totalVotes = votes.total;
   const hasVoted = votes.userVoted;
+  const isDemoMode = votes.demoMode;
   
   const app = document.querySelector('#app');
   
   app.innerHTML = `
     <div class="container">
+      ${isDemoMode ? `
+        <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; padding: 15px; margin-bottom: 30px; text-align: center;">
+          <strong>⚠️ DEMO-MODUS</strong><br>
+          <span style="font-size: 0.9rem;">Backend noch nicht konfiguriert. Votes werden nur lokal gespeichert.</span>
+        </div>
+      ` : ''}
+      
       <div class="header">
         <h1>🥊 Badge Battle 2025</h1>
         <p>Welches ISO 9001 Zertifikat-Badge soll das offizielle OnlineCert-Design werden? Ihre Stimme entscheidet!</p>
