@@ -1,7 +1,7 @@
 import './style.css';
 
 // !!! WICHTIG: Diese URL nach Google Apps Script Deployment ersetzen !!!
-const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyTeKNvh2I03ljodHa2lSBB2njt3WOGfom6ELk8nxrgRydcEsWMTPeVvC4Rsz2H78ZHPA/exec';
+const BACKEND_URL = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
 
 // Check if backend is configured
 const BACKEND_CONFIGURED = BACKEND_URL !== 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
@@ -239,17 +239,23 @@ async function render() {
         <p style="color: var(--text-light); margin-bottom: 20px;">
           Je mehr mitmachen, desto aussagekräftiger wird das Ergebnis!
         </p>
-        <div class="share-buttons">
-          <button class="share-btn linkedin" id="share-linkedin">
-            Auf LinkedIn teilen
-          </button>
-          <button class="share-btn whatsapp" id="share-whatsapp">
-            Per WhatsApp teilen
-          </button>
-          <button class="share-btn email" id="share-email">
-            Per E-Mail teilen
-          </button>
-        </div>
+        <button class="copy-link-btn" id="copy-link-btn" style="
+          background: #10b981;
+          color: white;
+          border: none;
+          padding: 15px 40px;
+          font-size: 1.1rem;
+          font-weight: 600;
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          width: 100%;
+          max-width: 400px;
+          margin: 0 auto;
+          display: block;
+        ">
+          📋 Link kopieren
+        </button>
       </div>
       
       <div class="footer">
@@ -258,7 +264,7 @@ async function render() {
           - Ihre schnelle & transparente ISO-Zertifizierung
         </p>
         <p style="margin-top: 10px; font-size: 0.9rem;">
-          Das Gewinner-Badge wird ab März 2025 allen zertifizierten Unternehmen zur Verfügung gestellt.
+          Das Gewinner-Badge wird ab März 2026 allen zertifizierten Unternehmen zur Verfügung gestellt.
         </p>
       </div>
     </div>
@@ -272,9 +278,39 @@ async function render() {
     });
   });
   
-  document.getElementById('share-linkedin')?.addEventListener('click', shareLinkedIn);
-  document.getElementById('share-whatsapp')?.addEventListener('click', shareWhatsApp);
-  document.getElementById('share-email')?.addEventListener('click', shareEmail);
+  // Copy link button
+  const copyLinkBtn = document.getElementById('copy-link-btn');
+  if (copyLinkBtn) {
+    copyLinkBtn.addEventListener('click', () => {
+      const url = window.location.href;
+      
+      navigator.clipboard.writeText(url).then(() => {
+        copyLinkBtn.textContent = '✓ Link kopiert!';
+        copyLinkBtn.style.background = '#7c3aed';
+        
+        setTimeout(() => {
+          copyLinkBtn.textContent = '📋 Link kopieren';
+          copyLinkBtn.style.background = '#10b981';
+        }, 2000);
+      }).catch(() => {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = url;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        copyLinkBtn.textContent = '✓ Link kopiert!';
+        copyLinkBtn.style.background = '#7c3aed';
+        
+        setTimeout(() => {
+          copyLinkBtn.textContent = '📋 Link kopieren';
+          copyLinkBtn.style.background = '#10b981';
+        }, 2000);
+      });
+    });
+  }
 }
 
 // Initialize and auto-refresh every 10 seconds
